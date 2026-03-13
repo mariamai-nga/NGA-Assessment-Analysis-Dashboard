@@ -1,808 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Student Assessment Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'DM Sans', 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #f0f4ff 0%, #e8ecf5 50%, #f5f0ff 100%);
-    min-height: 100vh; color: #1e293b;
-  }
-  .header {
-    background: linear-gradient(135deg, #312e81 0%, #4338ca 50%, #6366f1 100%);
-    padding: 32px 40px; color: #fff;
-  }
-  .header-inner { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
-  .header-sub { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.7; margin-bottom: 6px; }
-  .header h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
-  .container { max-width: 1200px; margin: 0 auto; padding: 28px 20px 60px; }
-
-  .setup-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 18px; background: #fff; padding: 24px; border-radius: 14px;
-    box-shadow: 0 1px 4px rgba(30,41,59,0.06); border: 1px solid #e8ecf1; margin-bottom: 24px;
-  }
-  .field-label { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; display: block; }
-  .field-input, .field-select {
-    width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid #d1d5db;
-    font-size: 14px; font-family: inherit; background: #fff; outline: none;
-  }
-  .field-input:focus, .field-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
-
-  .upload-zone {
-    border: 2px dashed #cbd5e1; border-radius: 16px; padding: 48px 32px; text-align: center;
-    background: #f8fafc; transition: all 0.2s; cursor: pointer;
-  }
-  .upload-zone.dragging { border-color: #6366f1; background: #eef2ff; }
-  .upload-zone-icon { font-size: 48px; margin-bottom: 12px; }
-  .upload-zone-title { font-size: 17px; font-weight: 700; color: #1e293b; margin-bottom: 6px; }
-  .upload-zone-sub { font-size: 13px; color: #94a3b8; line-height: 1.6; }
-  .upload-error { margin-top: 14px; color: #dc2626; font-weight: 600; font-size: 14px; }
-
-  .stats-row { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
-  .stat-card {
-    background: #fff; border-radius: 14px; padding: 22px 24px;
-    box-shadow: 0 1px 4px rgba(30,41,59,0.06); border: 1px solid #e8ecf1;
-    min-width: 160px; flex: 1;
-  }
-  .stat-label { font-size: 12px; color: #64748b; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 6px; }
-  .stat-value { font-size: 32px; font-weight: 800; line-height: 1.1; }
-  .stat-sub { font-size: 13px; color: #94a3b8; margin-top: 4px; }
-
-  .badge {
-    display: inline-block; padding: 3px 10px; border-radius: 12px;
-    font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
-  }
-
-  .progress-bar { width: 100%; background: #e2e8f0; border-radius: 8px; height: 8px; overflow: hidden; }
-  .progress-fill { height: 100%; border-radius: 8px; transition: width 0.5s ease; }
-
-  .tab-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
-  .tab-group { display: flex; gap: 6px; background: #fff; border-radius: 12px; padding: 4px; box-shadow: 0 1px 4px rgba(30,41,59,0.06); border: 1px solid #e8ecf1; }
-  .tab-btn {
-    padding: 10px 20px; border-radius: 10px; border: none;
-    font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.2s;
-  }
-  .tab-btn.active { background: #6366f1; color: #fff; }
-  .tab-btn:not(.active) { background: transparent; color: #64748b; }
-  .tab-btn:not(.active):hover { background: #f1f5f9; }
-
-  .btn-outline {
-    padding: 10px 20px; border-radius: 10px; border: 1px solid #e2e8f0;
-    background: #fff; color: #64748b; font-size: 13px; font-weight: 600;
-    cursor: pointer; font-family: inherit;
-  }
-  .btn-outline:hover { background: #f8fafc; }
-
-  .btn-header {
-    background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3);
-    padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 700;
-    cursor: pointer; backdrop-filter: blur(10px); transition: all 0.2s; font-family: inherit;
-  }
-  .btn-header:hover { background: rgba(255,255,255,0.25); }
-
-  .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  .data-table thead tr { background: #f1f5f9; }
-  .data-table th {
-    padding: 14px 16px; text-align: left; font-weight: 700; color: #475569;
-    font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em;
-    border-bottom: 2px solid #e2e8f0; white-space: nowrap;
-  }
-  .data-table td { padding: 14px 16px; }
-  .data-table tbody tr { transition: background 0.15s; }
-  .data-table tbody tr:nth-child(odd) { background: #fff; }
-  .data-table tbody tr:nth-child(even) { background: #fafbfd; }
-  .data-table tbody tr.clickable { cursor: pointer; }
-  .data-table tbody tr.clickable:hover { background: #f0f4ff !important; }
-
-  .card { background: #fff; border-radius: 14px; border: 1px solid #e8ecf1; overflow: hidden; box-shadow: 0 1px 4px rgba(30,41,59,0.06); }
-  .card-padded { padding: 20px 24px; }
-
-  .question-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
-  .question-card {
-    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-    background: #fff; border-radius: 10px; font-size: 13px;
-  }
-  .question-card.pass { border: 1px solid #bbf7d0; }
-  .question-card.fail { border: 1px solid #fecaca; }
-  .q-icon {
-    width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center;
-    justify-content: center; font-weight: 800; font-size: 11px; flex-shrink: 0;
-  }
-  .q-icon.pass { background: #dcfce7; color: #16a34a; }
-  .q-icon.fail { background: #fee2e2; color: #dc2626; }
-  .q-text { flex: 1; min-width: 0; }
-  .q-text-title { font-weight: 600; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .q-text-sub { font-size: 11px; color: #94a3b8; }
-
-  .mc-code-badge { background: #ede9fe; color: #7c3aed; padding: 5px 14px; border-radius: 10px; font-size: 14px; font-weight: 800; display: inline-block; }
-  .mc-code-sm { background: #ede9fe; color: #7c3aed; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; display: inline-block; }
-  .reteach-alert {
-    margin-top: 14px; padding: 10px 14px; background: #fef2f2; border-radius: 10px;
-    border: 1px solid #fecaca; font-size: 13px; color: #991b1b; font-weight: 600;
-  }
-  .mc-question-chip {
-    padding: 8px 14px; border-radius: 10px; background: #f8fafc;
-    border: 1px solid #e2e8f0; font-size: 12px; display: inline-block;
-  }
-
-  .detail-panel {
-    background: #f8fafc; padding: 16px 24px;
-    border-top: 1px solid #e2e8f0; border-bottom: 2px solid #e2e8f0;
-  }
-  .detail-title {
-    font-size: 13px; font-weight: 700; color: #475569; margin-bottom: 12px;
-    text-transform: uppercase; letter-spacing: 0.04em;
-  }
-  .hidden { display: none; }
-
-  @media (max-width: 640px) {
-    .header { padding: 20px; }
-    .header h1 { font-size: 22px; }
-    .stat-value { font-size: 24px; }
-    .container { padding: 16px 12px 40px; }
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <title>Student Assessment Dashboard</title>
+    <!-- EmailJS CDN for email functionality -->
+    <script src="https://cdn.emailjs.com/dist/email.min.js"></script>
 </head>
 <body>
-
-<div class="header">
-  <div class="header-inner">
-    <div>
-      <div class="header-sub">Assessment Analytics</div>
-      <h1>Student Performance Dashboard</h1>
+    <div id="dashboard">
+        <!-- Existing dashboard content -->
     </div>
-    <button id="downloadBtn" class="btn-header hidden" onclick="downloadHTMLReport()">📥 Download Report</button>
-  </div>
-</div>
 
-<div class="container">
-  <div class="setup-grid">
-    <div>
-      <label class="field-label">Teacher's Name</label>
-      <input class="field-input" id="teacherName" placeholder="e.g. Ms. Johnson">
+    <!-- Email Configuration Modal -->
+    <div id="emailModal" style="display:none;">
+        <h2>Send Email</h2>
+        <label for="recipient">Select Recipient:</label>
+        <select id="recipient"></select>
+        <button id="sendEmailBtn">Send Email</button>
+        <button id="closeModalBtn">Close</button>
     </div>
-    <div>
-      <label class="field-label">Subject</label>
-      <input class="field-input" id="subject" placeholder="e.g. Mathematics">
-    </div>
-    <div>
-      <label class="field-label">Year Group</label>
-      <select class="field-select" id="yearGroup">
-        <option value="">Select Year</option>
-        <option>Year 7</option><option>Year 8</option><option>Year 9</option>
-        <option>Year 10</option><option>Year 11</option><option>Year 12</option>
-      </select>
-    </div>
-    <div>
-      <label class="field-label">Assessment Period</label>
-      <select class="field-select" id="assessPeriod">
-        <option value="">Select Period</option>
-        <option>Half Term 1</option><option>End of Term 1</option>
-        <option>Half Term 2</option><option>End of Term 2</option>
-        <option>Half Term 3</option><option>End of Term 3</option>
-      </select>
-    </div>
-  </div>
 
-  <div id="uploadZone" class="upload-zone" onclick="document.getElementById('csvInput').click()">
-    <input type="file" id="csvInput" accept=".csv" style="display:none">
-    <div class="upload-zone-icon">📊</div>
-    <div class="upload-zone-title">Drop your CSV file here or click to browse</div>
-    <div class="upload-zone-sub">Required columns: User Name, First Name, Last Name, Question Number,<br>Question text, Mastery Code, Points earned, Points possible</div>
-    <div id="uploadError" class="upload-error hidden"></div>
-  </div>
+    <script>
+        // Predefined email addresses stored in localStorage
+        const emailAddresses = JSON.parse(localStorage.getItem('emailAddresses')) || [];
 
-  <div id="dashboard" class="hidden">
-    <div class="tab-bar">
-      <div class="tab-group">
-        <button class="tab-btn active" onclick="switchTab('mastery', this)">📊 Subject Mastery</button>
-        <button class="tab-btn" onclick="switchTab('questions', this)">❓ Question Analysis</button>
-        <button class="tab-btn" onclick="switchTab('codes', this)">🎯 Learning Objectives</button>
-      </div>
-      <button class="btn-outline" onclick="resetData()">↻ Upload New Data</button>
-    </div>
-    <div id="tab-mastery"></div>
-    <div id="tab-questions" class="hidden"></div>
-    <div id="tab-codes" class="hidden"></div>
-  </div>
-</div>
+        const populateRecipients = () => {
+            const recipientSelect = document.getElementById('recipient');
+            recipientSelect.innerHTML = '';
+            emailAddresses.forEach(email => {
+                const option = document.createElement('option');
+                option.value = email;
+                option.textContent = email;
+                recipientSelect.appendChild(option);
+            });
+        };
 
-<script>
-let analysisData = null;
-let expandedStudent = null;
+        const sendEmail = () => {
+            const selectedRecipient = document.getElementById('recipient').value;
+            const templateParams = {
+                to_email: selectedRecipient,
+                message: "Here is your HTML report...",
+            };
+            emailjs.send('YOUR_SERVICE_ID', 'YOUR_TEMPLATE_ID', templateParams)
+                .then(response => {
+                    alert('Email sent successfully!');
+                }, error => {
+                    alert('Failed to send email: ' + error); 
+                });
+        };
 
-const MASTERY = { mastered: 80, approaching: 60, developing: 40 };
+        document.getElementById('sendEmailBtn').addEventListener('click', sendEmail);
 
-function getMastery(pct) {
-  if (pct >= MASTERY.mastered) return { label: "Mastered", color: "#16a34a", bg: "#dcfce7" };
-  if (pct >= MASTERY.approaching) return { label: "Approaching", color: "#ca8a04", bg: "#fef9c3" };
-  if (pct >= MASTERY.developing) return { label: "Developing", color: "#ea580c", bg: "#ffedd5" };
-  return { label: "Beginning", color: "#dc2626", bg: "#fee2e2" };
-}
+        // Populate recipients on load
+        populateRecipients();
 
-function passFail(earned, possible) {
-  if (!possible) return { passed: false, pct: 0 };
-  const pct = (earned / possible) * 100;
-  return { passed: pct >= 50, pct };
-}
-
-function badge(m) { return `<span class="badge" style="color:${m.color};background:${m.bg}">${m.label}</span>`; }
-function progressBar(pct, color, h=8) {
-  const c = color || getMastery(pct).color;
-  return `<div class="progress-bar" style="height:${h}px"><div class="progress-fill" style="width:${Math.min(pct,100)}%;background:${c}"></div></div>`;
-}
-function statCard(label, value, accent, sub='') {
-  return `<div class="stat-card"><div class="stat-label">${label}</div><div class="stat-value" style="color:${accent}">${value}</div>${sub?`<div class="stat-sub">${sub}</div>`:''}</div>`;
-}
-
-// Upload handling
-const zone = document.getElementById('uploadZone');
-const csvInput = document.getElementById('csvInput');
-
-zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragging'); });
-zone.addEventListener('dragleave', () => zone.classList.remove('dragging'));
-zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragging'); if(e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
-csvInput.addEventListener('change', e => { if(e.target.files[0]) processFile(e.target.files[0]); });
-
-function processFile(file) {
-  const errEl = document.getElementById('uploadError');
-  errEl.classList.add('hidden');
-  if (!file.name.endsWith('.csv')) { errEl.textContent = 'Please upload a CSV file.'; errEl.classList.remove('hidden'); return; }
-
-  Papa.parse(file, {
-    header: true, skipEmptyLines: true,
-    complete(results) {
-      const req = ["User Name","First Name","Last Name","Question Number","Question text","Mastery Code","Points earned","Points possible"];
-      const cols = results.meta.fields || [];
-      const missing = req.filter(r => !cols.some(c => c.trim() === r));
-      if (missing.length) { errEl.textContent = `Missing columns: ${missing.join(", ")}`; errEl.classList.remove('hidden'); return; }
-      const data = results.data.map(row => {
-        const c = {}; Object.keys(row).forEach(k => c[k.trim()] = (row[k]||'').trim()); return c;
-      }).filter(r => r["User Name"] && r["Question Number"]);
-      if (!data.length) { errEl.textContent = 'No valid data rows found.'; errEl.classList.remove('hidden'); return; }
-      analyzeData(data);
-    },
-    error() { errEl.textContent = 'Failed to parse CSV.'; errEl.classList.remove('hidden'); }
-  });
-}
-
-function analyzeData(rawData) {
-  // Students
-  const sMap = {};
-  rawData.forEach(r => {
-    const u = r["User Name"];
-    if (!sMap[u]) sMap[u] = { username: u, firstName: r["First Name"], lastName: r["Last Name"], questions: [], earned: 0, possible: 0 };
-    const e = parseFloat(r["Points earned"])||0, p = parseFloat(r["Points possible"])||0;
-    sMap[u].questions.push({ number: r["Question Number"], text: r["Question text"], masteryCode: r["Mastery Code"], earned: e, possible: p });
-    sMap[u].earned += e; sMap[u].possible += p;
-  });
-  const students = Object.values(sMap).map(s => ({ ...s, pct: s.possible ? (s.earned/s.possible)*100 : 0 }));
-  const classAvg = students.length ? students.reduce((a,s)=>a+s.pct,0)/students.length : 0;
-
-  // Questions
-  const qMap = {};
-  rawData.forEach(r => {
-    const qn = r["Question Number"];
-    if (!qMap[qn]) qMap[qn] = { number: qn, text: r["Question text"], masteryCode: r["Mastery Code"], attempts: [], totalE: 0, totalP: 0 };
-    const e = parseFloat(r["Points earned"])||0, p = parseFloat(r["Points possible"])||0;
-    qMap[qn].attempts.push({ earned: e, possible: p, username: r["User Name"] });
-    qMap[qn].totalE += e; qMap[qn].totalP += p;
-  });
-  const questions = Object.values(qMap).map(q => {
-    const avg = q.totalP ? (q.totalE/q.totalP)*100 : 0;
-    const passed = q.attempts.filter(a => a.possible && (a.earned/a.possible)>=0.5).length;
-    return { ...q, avgPct: avg, passed, failed: q.attempts.length - passed, passRate: q.attempts.length ? (passed/q.attempts.length)*100 : 0 };
-  });
-
-  // Mastery Codes
-  const cMap = {};
-  rawData.forEach(r => {
-    const code = r["Mastery Code"]; if (!code) return;
-    if (!cMap[code]) cMap[code] = { code, questions: {}, totalE: 0, totalP: 0, totalStudents: 0 };
-    const qn = r["Question Number"];
-    const e = parseFloat(r["Points earned"])||0, p = parseFloat(r["Points possible"])||0;
-    if (!cMap[code].questions[qn]) cMap[code].questions[qn] = { number: qn, text: r["Question text"], totalE: 0, totalP: 0, count: 0, studentResults: [] };
-    cMap[code].questions[qn].totalE += e; cMap[code].questions[qn].totalP += p; cMap[code].questions[qn].count++;
-    cMap[code].questions[qn].studentResults.push({ username: r["User Name"], name: `${r["First Name"]} ${r["Last Name"]}`, earned: e, possible: p });
-    cMap[code].totalE += e; cMap[code].totalP += p; cMap[code].totalStudents++;
-  });
-  const masteryCodes = Object.values(cMap).map(mc => {
-    const qs = Object.values(mc.questions).map(q => ({ ...q, avgPct: q.totalP ? (q.totalE/q.totalP)*100 : 0 }));
-    return { ...mc, questions: qs, avgPct: mc.totalP ? (mc.totalE/mc.totalP)*100 : 0 };
-  });
-
-  analysisData = { students, classAvg, questions, masteryCodes };
-  renderDashboard();
-}
-
-function renderDashboard() {
-  document.getElementById('uploadZone').classList.add('hidden');
-  document.getElementById('dashboard').classList.remove('hidden');
-  document.getElementById('downloadBtn').classList.remove('hidden');
-  renderMastery();
-  renderQuestions();
-  renderCodes();
-}
-
-function renderMastery() {
-  const { students, classAvg } = analysisData;
-  const sorted = [...students].sort((a,b) => b.pct - a.pct);
-  const mastered = students.filter(s => s.pct >= 80).length;
-  const needHelp = students.filter(s => s.pct < 50).length;
-
-  let html = `<div class="stats-row">
-    ${statCard("Class Average", classAvg.toFixed(1)+"%", "#6366f1")}
-    ${statCard("Total Students", students.length, "#0ea5e9")}
-    ${statCard("Mastered (≥80%)", mastered, "#16a34a", `${students.length ? ((mastered/students.length)*100).toFixed(0) : 0}% of class`)}
-    ${statCard("Need Support (<50%)", needHelp, "#dc2626")}
-  </div>`;
-
-  html += `<div class="card"><div style="overflow-x:auto"><table class="data-table"><thead><tr>
-    <th>Student</th><th>Score</th><th>Points</th><th>Progress</th><th>Mastery Level</th><th style="width:40px"></th>
-  </tr></thead><tbody>`;
-
-  sorted.forEach((s, i) => {
-    const m = getMastery(s.pct);
-    html += `<tr class="clickable" onclick="toggleStudent('${s.username.replace(/'/g,"\\'")}', this)" data-idx="${i}">
-      <td><div style="font-weight:600">${s.firstName} ${s.lastName}</div><div style="font-size:11px;color:#94a3b8">${s.username}</div></td>
-      <td style="font-weight:700;color:${m.color}">${s.pct.toFixed(1)}%</td>
-      <td style="color:#64748b">${s.earned}/${s.possible}</td>
-      <td style="width:18%">${progressBar(s.pct)}</td>
-      <td>${badge(m)}</td>
-      <td style="color:#94a3b8;font-size:18px;text-align:center" id="arrow-${s.username.replace(/[^a-zA-Z0-9]/g,'_')}">▼</td>
-    </tr>`;
-    html += `<tr id="detail-${s.username.replace(/[^a-zA-Z0-9]/g,'_')}" class="hidden"><td colspan="6" style="padding:0"><div class="detail-panel">
-      <div class="detail-title">Question-by-Question Breakdown — ${s.firstName} ${s.lastName}</div>
-      <div class="question-grid">`;
-    s.questions.forEach(q => {
-      const pf = passFail(q.earned, q.possible);
-      html += `<div class="question-card ${pf.passed?'pass':'fail'}">
-        <span class="q-icon ${pf.passed?'pass':'fail'}">${pf.passed?'✓':'✗'}</span>
-        <div class="q-text"><div class="q-text-title">Q${q.number}: ${q.text}</div><div class="q-text-sub">${q.earned}/${q.possible} pts · ${q.masteryCode}</div></div>
-        <span style="font-weight:700;font-size:12px;color:${pf.passed?'#16a34a':'#dc2626'};flex-shrink:0">${pf.pct.toFixed(0)}%</span>
-      </div>`;
-    });
-    html += `</div></div></td></tr>`;
-  });
-
-  html += `</tbody></table></div></div>`;
-  document.getElementById('tab-mastery').innerHTML = html;
-}
-
-function toggleStudent(username) {
-  const safe = username.replace(/[^a-zA-Z0-9]/g,'_');
-  const detail = document.getElementById('detail-'+safe);
-  const arrow = document.getElementById('arrow-'+safe);
-  if (!detail) return;
-  if (detail.classList.contains('hidden')) {
-    detail.classList.remove('hidden');
-    if (arrow) arrow.textContent = '▲';
-  } else {
-    detail.classList.add('hidden');
-    if (arrow) arrow.textContent = '▼';
-  }
-}
-
-function renderQuestions() {
-  const { questions } = analysisData;
-  const sorted = [...questions].sort((a,b) => a.avgPct - b.avgPct);
-  const avgPass = questions.length ? questions.reduce((a,q)=>a+q.passRate,0)/questions.length : 0;
-
-  let html = `<div class="stats-row">
-    ${statCard("Total Questions", questions.length, "#6366f1")}
-    ${statCard("Avg. Pass Rate", avgPass.toFixed(1)+"%", "#0ea5e9")}
-    ${statCard("Hardest Question", sorted.length ? "Q"+sorted[0].number : "—", "#dc2626", sorted.length ? sorted[0].avgPct.toFixed(1)+"% avg" : "")}
-    ${statCard("Easiest Question", sorted.length ? "Q"+sorted[sorted.length-1].number : "—", "#16a34a", sorted.length ? sorted[sorted.length-1].avgPct.toFixed(1)+"% avg" : "")}
-  </div>`;
-
-  html += `<div class="card"><div style="overflow-x:auto"><table class="data-table"><thead><tr>
-    <th>Q#</th><th>Question Text</th><th>Mastery Code</th><th>Avg Score</th><th>Pass Rate</th><th>Passed / Failed</th>
-  </tr></thead><tbody>`;
-
-  sorted.forEach(q => {
-    const m = getMastery(q.avgPct);
-    const prColor = q.passRate >= 70 ? "#16a34a" : q.passRate >= 50 ? "#ca8a04" : "#dc2626";
-    html += `<tr>
-      <td style="font-weight:800;color:#6366f1">Q${q.number}</td>
-      <td style="color:#334155;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${q.text}">${q.text}</td>
-      <td><span class="mc-code-sm">${q.masteryCode}</span></td>
-      <td style="font-weight:700;color:${m.color}">${q.avgPct.toFixed(1)}%</td>
-      <td style="width:16%"><div style="display:flex;align-items:center;gap:8px">${progressBar(q.passRate, prColor)}<span style="font-size:12px;font-weight:700;color:#64748b;white-space:nowrap">${q.passRate.toFixed(0)}%</span></div></td>
-      <td style="font-size:13px"><span style="color:#16a34a;font-weight:700">${q.passed}</span><span style="color:#94a3b8"> / </span><span style="color:#dc2626;font-weight:700">${q.failed}</span></td>
-    </tr>`;
-  });
-  html += `</tbody></table></div></div>`;
-  document.getElementById('tab-questions').innerHTML = html;
-}
-
-function renderCodes() {
-  const { masteryCodes } = analysisData;
-  const sorted = [...masteryCodes].sort((a,b) => a.avgPct - b.avgPct);
-
-  let html = `<div class="stats-row">
-    ${statCard("Learning Objectives", masteryCodes.length, "#6366f1")}
-    ${statCard("Mastered (≥80%)", masteryCodes.filter(m=>m.avgPct>=80).length, "#16a34a")}
-    ${statCard("Needs Reteaching (<50%)", masteryCodes.filter(m=>m.avgPct<50).length, "#dc2626")}
-  </div><div style="display:grid;gap:16px">`;
-
-  sorted.forEach(mc => {
-    const m = getMastery(mc.avgPct);
-    const safeCode = mc.code.replace(/[^a-zA-Z0-9]/g,'_');
-    html += `<div class="card card-padded">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-        <div style="display:flex;align-items:center;gap:12px"><span class="mc-code-badge">${mc.code}</span>${badge(m)}</div>
-        <div style="font-size:13px;color:#64748b"><strong style="color:${m.color}">${mc.avgPct.toFixed(1)}%</strong> avg · ${mc.questions.length} question${mc.questions.length>1?'s':''} · ${mc.totalStudents} attempt${mc.totalStudents>1?'s':''}</div>
-      </div>
-      ${progressBar(mc.avgPct, null, 10)}`;
-
-    if (mc.avgPct < 50) html += `<div class="reteach-alert">⚠ This learning objective needs reteaching — class average is below 50%</div>`;
-
-    // Questions with student pass/fail
-    html += `<div style="margin-top:18px">`;
-    mc.questions.forEach((q, qi) => {
-      const qm = getMastery(q.avgPct);
-      const passedStudents = (q.studentResults||[]).filter(sr => passFail(sr.earned, sr.possible).passed);
-      const failedStudents = (q.studentResults||[]).filter(sr => !passFail(sr.earned, sr.possible).passed);
-      const qSafe = safeCode + '_q' + qi;
-
-      html += `<div style="border:1px solid #e8ecf1;border-radius:10px;margin-bottom:12px;overflow:hidden">
-        <div style="background:#f8fafc;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;cursor:pointer" onclick="toggleCodeQ('${qSafe}')">
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-weight:800;color:#6366f1;font-size:14px">Q${q.number}</span>
-            <span style="color:#334155;font-size:13px;font-weight:500">${q.text}</span>
-          </div>
-          <div style="display:flex;align-items:center;gap:12px">
-            <span style="font-weight:700;color:${qm.color};font-size:13px">${q.avgPct.toFixed(1)}%</span>
-            <span style="font-size:12px;color:#16a34a;font-weight:700">✓ ${passedStudents.length}</span>
-            <span style="font-size:12px;color:#dc2626;font-weight:700">✗ ${failedStudents.length}</span>
-            <span style="color:#94a3b8;font-size:16px" id="arrow-cq-${qSafe}">▼</span>
-          </div>
-        </div>
-        <div id="detail-cq-${qSafe}" class="hidden" style="padding:12px 16px;border-top:1px solid #e8ecf1">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-            <div>
-              <div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px">✓ Passed (${passedStudents.length})</div>`;
-      if (passedStudents.length) {
-        passedStudents.sort((a,b) => a.name.localeCompare(b.name)).forEach(sr => {
-          const pf = passFail(sr.earned, sr.possible);
-          html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#f0fdf4;border-radius:6px;margin-bottom:4px;font-size:12px">
-            <span style="font-weight:600;color:#166534">${sr.name}</span>
-            <span style="color:#16a34a;font-weight:700">${sr.earned}/${sr.possible} (${pf.pct.toFixed(0)}%)</span>
-          </div>`;
+        // Adding event listeners for dropdown menu
+        document.querySelector('#downloadBtn').innerHTML += '<option>Email</option>';
+        document.getElementById('closeModalBtn').addEventListener('click', () => {
+            document.getElementById('emailModal').style.display = 'none';
         });
-      } else {
-        html += `<div style="font-size:12px;color:#94a3b8;padding:6px 10px">No students passed</div>`;
-      }
-      html += `</div><div>
-              <div style="font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px">✗ Failed (${failedStudents.length})</div>`;
-      if (failedStudents.length) {
-        failedStudents.sort((a,b) => a.name.localeCompare(b.name)).forEach(sr => {
-          const pf = passFail(sr.earned, sr.possible);
-          html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:#fef2f2;border-radius:6px;margin-bottom:4px;font-size:12px">
-            <span style="font-weight:600;color:#991b1b">${sr.name}</span>
-            <span style="color:#dc2626;font-weight:700">${sr.earned}/${sr.possible} (${pf.pct.toFixed(0)}%)</span>
-          </div>`;
-        });
-      } else {
-        html += `<div style="font-size:12px;color:#94a3b8;padding:6px 10px">No students failed</div>`;
-      }
-      html += `</div></div></div></div>`;
-    });
-    html += `</div></div>`;
-  });
-  html += `</div>`;
-  document.getElementById('tab-codes').innerHTML = html;
-}
 
-function toggleCodeQ(id) {
-  const detail = document.getElementById('detail-cq-'+id);
-  const arrow = document.getElementById('arrow-cq-'+id);
-  if (!detail) return;
-  if (detail.classList.contains('hidden')) {
-    detail.classList.remove('hidden');
-    if (arrow) arrow.textContent = '▲';
-  } else {
-    detail.classList.add('hidden');
-    if (arrow) arrow.textContent = '▼';
-  }
-}
+        // Function to show email modal
+        const showEmailModal = () => {
+            document.getElementById('emailModal').style.display = 'block';
+        };
 
-function switchTab(tabId, btn) {
-  document.querySelectorAll('[id^="tab-"]').forEach(el => { if(el.id.startsWith('tab-')) el.classList.add('hidden'); });
-  document.getElementById('tab-'+tabId).classList.remove('hidden');
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-}
+        // Assuming you have a button to call this function
+        // add your button listener to call showEmailModal
 
-function resetData() {
-  analysisData = null; expandedStudent = null;
-  document.getElementById('dashboard').classList.add('hidden');
-  document.getElementById('downloadBtn').classList.add('hidden');
-  document.getElementById('uploadZone').classList.remove('hidden');
-  document.getElementById('csvInput').value = '';
-}
-
-// ══════════════════════════════════════
-//  HTML REPORT GENERATION & DOWNLOAD
-// ══════════════════════════════════════
-function downloadHTMLReport() {
-  if (!analysisData) return;
-
-  const teacher = document.getElementById('teacherName').value || 'N/A';
-  const subject = document.getElementById('subject').value || 'N/A';
-  const year = document.getElementById('yearGroup').value || 'N/A';
-  const period = document.getElementById('assessPeriod').value || 'N/A';
-  const genDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-  const { students, classAvg, questions, masteryCodes } = analysisData;
-  const needSupport = students.filter(s => s.pct < 50).sort((a,b) => a.pct - b.pct);
-  const reteach = masteryCodes.filter(m => m.avgPct < 50).sort((a,b) => a.avgPct - b.avgPct);
-  const mastered = students.filter(s => s.pct >= 80).length;
-
-  function esc(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
-  function mLabel(pct) {
-    if (pct >= 80) return 'Mastered';
-    if (pct >= 60) return 'Approaching';
-    if (pct >= 40) return 'Developing';
-    return 'Beginning';
-  }
-  function mColor(pct) {
-    if (pct >= 80) return '#16a34a';
-    if (pct >= 60) return '#ca8a04';
-    if (pct >= 40) return '#ea580c';
-    return '#dc2626';
-  }
-  function mBg(pct) {
-    if (pct >= 80) return '#dcfce7';
-    if (pct >= 60) return '#fef9c3';
-    if (pct >= 40) return '#ffedd5';
-    return '#fee2e2';
-  }
-  function badgeH(pct) {
-    return `<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase;color:${mColor(pct)};background:${mBg(pct)}">${mLabel(pct)}</span>`;
-  }
-  function statusBadge(passed) {
-    return passed
-      ? '<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;background:#dcfce7;color:#16a34a">PASS</span>'
-      : '<span style="display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;background:#fee2e2;color:#dc2626">FAIL</span>';
-  }
-  function progBar(pct) {
-    const c = mColor(pct);
-    return `<div style="width:100%;background:#e2e8f0;border-radius:6px;height:8px;overflow:hidden"><div style="width:${Math.min(pct,100)}%;height:100%;background:${c};border-radius:6px"></div></div>`;
-  }
-
-  let html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Assessment Report - ${esc(subject)} ${esc(year)} ${esc(period)}</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', 'Segoe UI', Arial, sans-serif; color: #1e293b; background: #fff; }
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .page-break { page-break-before: always; }
-    .no-break { page-break-inside: avoid; }
-  }
-  .report-header {
-    background: linear-gradient(135deg, #312e81 0%, #4338ca 50%, #6366f1 100%);
-    padding: 36px 40px; color: #fff; margin-bottom: 0;
-  }
-  .report-header h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
-  .report-header .sub { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.7; margin-bottom: 8px; }
-  .report-header .meta { font-size: 13px; opacity: 0.9; }
-  .report-header .meta span { margin-right: 18px; }
-  .info-bar {
-    background: #f8fafc; padding: 14px 40px; border-bottom: 1px solid #e2e8f0;
-    display: flex; flex-wrap: wrap; gap: 24px; font-size: 13px; color: #475569;
-  }
-  .info-bar strong { color: #1e293b; }
-  .container { max-width: 960px; margin: 0 auto; padding: 30px 24px 50px; }
-  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 32px; }
-  .summary-box {
-    background: #f8fafc; border: 1px solid #e8ecf1; border-radius: 12px; padding: 18px 20px;
-  }
-  .summary-box .label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
-  .summary-box .value { font-size: 28px; font-weight: 800; line-height: 1.1; }
-  .summary-box .sub { font-size: 12px; color: #94a3b8; margin-top: 2px; }
-  .section-header {
-    padding: 12px 18px; border-radius: 8px; color: #fff; font-size: 14px; font-weight: 700;
-    margin: 32px 0 16px; letter-spacing: 0.02em;
-  }
-  .section-header.red { background: #dc2626; }
-  .section-header.amber { background: #ca8a04; }
-  .section-header.purple { background: #4338ca; }
-  .ok-msg { padding: 14px 18px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; color: #166534; font-weight: 600; font-size: 13px; margin-bottom: 16px; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 16px; }
-  table th {
-    background: #f1f5f9; padding: 10px 12px; text-align: left; font-weight: 700;
-    color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
-    border-bottom: 2px solid #e2e8f0;
-  }
-  table td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; }
-  table tbody tr:nth-child(even) { background: #fafbfd; }
-  .student-block {
-    background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;
-    padding: 12px 16px; margin-bottom: 12px;
-  }
-  .student-block-title { font-size: 13px; font-weight: 700; color: #991b1b; margin-bottom: 8px; }
-  .mc-block {
-    border: 1px solid #e8ecf1; border-radius: 10px; margin-bottom: 14px; overflow: hidden;
-  }
-  .mc-block-header {
-    background: #ede9fe; padding: 10px 16px; display: flex; justify-content: space-between;
-    align-items: center; flex-wrap: wrap; gap: 8px;
-  }
-  .mc-block-header .code { font-size: 15px; font-weight: 800; color: #7c3aed; }
-  .mc-block-header .info { font-size: 12px; color: #64748b; }
-  .reteach-warn {
-    background: #fef2f2; border: 1px solid #fecaca; padding: 8px 14px; margin: 10px 16px;
-    border-radius: 6px; font-size: 12px; color: #991b1b; font-weight: 600;
-  }
-  .print-hint { text-align: center; padding: 20px; color: #94a3b8; font-size: 12px; border-top: 1px solid #e2e8f0; margin-top: 40px; }
-</style></head><body>`;
-
-  // ── HEADER ──
-  html += `<div class="report-header">
-    <div class="sub">Assessment Analytics Report</div>
-    <h1>Student Assessment Report</h1>
-    <div class="meta">
-      <span><strong>Subject:</strong> ${esc(subject)}</span>
-      <span><strong>Year:</strong> ${esc(year)}</span>
-      <span><strong>Period:</strong> ${esc(period)}</span>
-    </div>
-  </div>
-  <div class="info-bar">
-    <div><strong>Teacher:</strong> ${esc(teacher)}</div>
-    <div><strong>Generated:</strong> ${genDate}</div>
-    <div><strong>Students:</strong> ${students.length}</div>
-    <div><strong>Questions:</strong> ${questions.length}</div>
-  </div>`;
-
-  html += `<div class="container">`;
-
-  // ── SUMMARY BOXES ──
-  html += `<div class="summary-grid">
-    <div class="summary-box"><div class="label">Class Average</div><div class="value" style="color:#6366f1">${classAvg.toFixed(1)}%</div></div>
-    <div class="summary-box"><div class="label">Total Students</div><div class="value" style="color:#0ea5e9">${students.length}</div></div>
-    <div class="summary-box"><div class="label">Mastered (≥80%)</div><div class="value" style="color:#16a34a">${mastered}</div><div class="sub">${students.length ? ((mastered/students.length)*100).toFixed(0) : 0}% of class</div></div>
-    <div class="summary-box"><div class="label">Need Support (&lt;50%)</div><div class="value" style="color:#dc2626">${needSupport.length}</div></div>
-  </div>`;
-
-  // ══════════════════════════════════════
-  //  SECTION 1: LEARNERS WHO NEED SUPPORT
-  // ══════════════════════════════════════
-  html += `<div class="section-header red">SECTION 1: LEARNERS WHO NEED SUPPORT (Score &lt; 50%)</div>`;
-
-  if (!needSupport.length) {
-    html += `<div class="ok-msg">✓ All students scored 50% or above. No immediate support required.</div>`;
-  } else {
-    html += `<p style="font-size:13px;color:#64748b;margin-bottom:12px">${needSupport.length} student(s) identified as needing support:</p>`;
-    html += `<table><thead><tr><th>Student Name</th><th>Username</th><th style="text-align:center">Score</th><th style="text-align:center">Points</th><th style="text-align:center">Mastery Level</th></tr></thead><tbody>`;
-    needSupport.forEach(s => {
-      html += `<tr><td style="font-weight:600">${esc(s.firstName)} ${esc(s.lastName)}</td><td>${esc(s.username)}</td><td style="text-align:center;font-weight:700;color:${mColor(s.pct)}">${s.pct.toFixed(1)}%</td><td style="text-align:center">${s.earned}/${s.possible}</td><td style="text-align:center">${badgeH(s.pct)}</td></tr>`;
-    });
-    html += `</tbody></table>`;
-
-    // Detailed failed questions per student
-    needSupport.forEach(s => {
-      const failedQs = s.questions.filter(q => !passFail(q.earned, q.possible).passed);
-      if (!failedQs.length) return;
-      html += `<div class="student-block no-break">
-        <div class="student-block-title">${esc(s.firstName)} ${esc(s.lastName)} (${esc(s.username)}) — ${s.pct.toFixed(1)}% — Failed Questions:</div>
-        <table style="margin:0"><thead><tr><th style="width:40px;text-align:center">Q#</th><th>Question</th><th style="text-align:center">Mastery Code</th><th style="text-align:center;width:70px">Score</th><th style="text-align:center;width:60px">Status</th></tr></thead><tbody>`;
-      failedQs.forEach(q => {
-        html += `<tr><td style="text-align:center;font-weight:700;color:#6366f1">Q${esc(q.number)}</td><td>${esc(q.text)}</td><td style="text-align:center"><span style="background:#ede9fe;color:#7c3aed;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700">${esc(q.masteryCode)}</span></td><td style="text-align:center">${q.earned}/${q.possible}</td><td style="text-align:center">${statusBadge(false)}</td></tr>`;
-      });
-      html += `</tbody></table></div>`;
-    });
-  }
-
-  // ══════════════════════════════════════
-  //  SECTION 2: MASTERY CODES TO RETEACH
-  // ══════════════════════════════════════
-  html += `<div class="section-header amber page-break">SECTION 2: MASTERY CODES THAT NEED RETEACHING (Avg &lt; 50%)</div>`;
-
-  if (!reteach.length) {
-    html += `<div class="ok-msg">✓ All mastery codes have a class average of 50% or above.</div>`;
-  } else {
-    html += `<p style="font-size:13px;color:#64748b;margin-bottom:12px">${reteach.length} mastery code(s) identified for reteaching:</p>`;
-    html += `<table><thead><tr><th>Mastery Code</th><th style="text-align:center">Class Avg</th><th style="text-align:center">Level</th><th style="text-align:center"># Questions</th><th>Questions</th></tr></thead><tbody>`;
-    reteach.forEach(mc => {
-      const qList = mc.questions.map(q => `Q${q.number} (${q.avgPct.toFixed(0)}%)`).join(', ');
-      html += `<tr><td style="font-weight:700">${esc(mc.code)}</td><td style="text-align:center;font-weight:700;color:${mColor(mc.avgPct)}">${mc.avgPct.toFixed(1)}%</td><td style="text-align:center">${badgeH(mc.avgPct)}</td><td style="text-align:center">${mc.questions.length}</td><td style="font-size:11px">${esc(qList)}</td></tr>`;
-    });
-    html += `</tbody></table>`;
-
-    reteach.forEach(mc => {
-      html += `<div class="student-block no-break" style="background:#fffbeb;border-color:#fde68a">
-        <div class="student-block-title" style="color:#92400e">${esc(mc.code)} — ${mc.avgPct.toFixed(1)}% avg — Question Details:</div>
-        <table style="margin:0"><thead><tr><th style="width:40px;text-align:center">Q#</th><th>Question Text</th><th style="text-align:center;width:80px">Avg Score</th><th style="text-align:center;width:90px">Total Attempts</th></tr></thead><tbody>`;
-      mc.questions.forEach(q => {
-        html += `<tr><td style="text-align:center;font-weight:700;color:#6366f1">Q${esc(q.number)}</td><td>${esc(q.text)}</td><td style="text-align:center;font-weight:700;color:${mColor(q.avgPct)}">${q.avgPct.toFixed(1)}%</td><td style="text-align:center">${q.count}</td></tr>`;
-      });
-      html += `</tbody></table></div>`;
-    });
-  }
-
-  // ══════════════════════════════════════
-  //  SECTION 3: ALL STUDENTS PERFORMANCE (Per Student)
-  // ══════════════════════════════════════
-  html += `<div class="section-header purple page-break">SECTION 3: ALL STUDENTS PERFORMANCE BY MASTERY CODE</div>`;
-
-  const sortedStudentsAll = [...students].sort((a,b) => (a.firstName+' '+a.lastName).localeCompare(b.firstName+' '+b.lastName));
-
-  sortedStudentsAll.forEach(s => {
-    const sm = getMastery(s.pct);
-    // Group this student's questions by mastery code
-    const codeGroups = {};
-    s.questions.forEach(q => {
-      if (!codeGroups[q.masteryCode]) codeGroups[q.masteryCode] = [];
-      codeGroups[q.masteryCode].push(q);
-    });
-    const sortedStudentCodes = Object.keys(codeGroups).sort();
-
-    html += `<div style="border:1px solid #e8ecf1;border-radius:10px;margin-bottom:16px;overflow:hidden" class="no-break">
-      <div style="background:linear-gradient(135deg,#f8fafc,#f0f4ff);padding:14px 18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;border-bottom:2px solid #e2e8f0">
-        <div>
-          <span style="font-size:15px;font-weight:700;color:#1e293b">${esc(s.firstName)} ${esc(s.lastName)}</span>
-          <span style="font-size:12px;color:#94a3b8;margin-left:8px">${esc(s.username)}</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <span style="font-weight:700;color:${sm.color};font-size:14px">${s.pct.toFixed(1)}%</span>
-          <span style="font-size:12px;color:#64748b">${s.earned}/${s.possible} pts</span>
-          ${badgeH(s.pct)}
-        </div>
-      </div>`;
-
-    sortedStudentCodes.forEach(code => {
-      const qs = codeGroups[code];
-      const codeEarned = qs.reduce((a,q) => a + q.earned, 0);
-      const codePossible = qs.reduce((a,q) => a + q.possible, 0);
-      const codePct = codePossible ? (codeEarned/codePossible)*100 : 0;
-
-      html += `<div style="padding:10px 18px;border-bottom:1px solid #f1f5f9">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="background:#ede9fe;color:#7c3aed;padding:3px 10px;border-radius:8px;font-size:12px;font-weight:700">${esc(code)}</span>
-          <span style="font-size:12px;font-weight:700;color:${mColor(codePct)}">${codePct.toFixed(1)}%</span>
-          ${badgeH(codePct)}
-        </div>
-        <table style="margin:0"><thead><tr>
-          <th style="width:40px;text-align:center">Q#</th><th>Question</th><th style="text-align:center;width:70px">Score</th><th style="text-align:center;width:60px">Status</th>
-        </tr></thead><tbody>`;
-      qs.forEach(q => {
-        const pf = passFail(q.earned, q.possible);
-        html += `<tr>
-          <td style="text-align:center;font-weight:700;color:#6366f1">Q${esc(q.number)}</td>
-          <td>${esc(q.text)}</td>
-          <td style="text-align:center">${q.earned}/${q.possible}</td>
-          <td style="text-align:center">${statusBadge(pf.passed)}</td>
-        </tr>`;
-      });
-      html += `</tbody></table></div>`;
-    });
-
-    html += `</div>`;
-  });
-
-  html += `<div class="print-hint">This report was generated from the Student Assessment Dashboard. You can print this page using Ctrl+P / Cmd+P to save as PDF.</div>`;
-  html += `</div></body></html>`;
-
-  // Download as HTML file
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Assessment_Report_${subject.replace(/\s+/g,'_')}_${year.replace(/\s+/g,'_')}_${period.replace(/\s+/g,'_')}.html`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-</script>
+    </script>
+    <style>
+        /* Styles for the email dialog and toast notifications */
+        #emailModal { 
+            background: white;
+            border: 1px solid black;
+            padding: 20px;
+            border-radius: 5px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+        }
+        /* Additional styles for toast notifications */
+    </style>
 </body>
 </html>
